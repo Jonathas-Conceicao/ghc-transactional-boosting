@@ -685,6 +685,7 @@ loop:
   case UNDERFLOW_FRAME:
   case STOP_FRAME:
   case CATCH_FRAME:
+  case TBOOST_STM_FRAME:
   case CATCH_STM_FRAME:
   case CATCH_RETRY_FRAME:
   case ATOMICALLY_FRAME:

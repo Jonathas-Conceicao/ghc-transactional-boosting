@@ -429,6 +429,8 @@ RTS_FUN_DECL(stg_mkApUpd0zh);
 RTS_FUN_DECL(stg_retryzh);
 RTS_FUN_DECL(stg_catchRetryzh);
 RTS_FUN_DECL(stg_catchSTMzh);
+RTS_FUN_DECL(stg_newTBSTMzh);
+RTS_FUN_DECL(stg_abortTBzh);
 RTS_FUN_DECL(stg_atomicallyzh);
 RTS_FUN_DECL(stg_newTVarzh);
 RTS_FUN_DECL(stg_readTVarzh);

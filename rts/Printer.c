@@ -1016,6 +1016,7 @@ char *closure_type_names[] = {
  [ATOMICALLY_FRAME]      = "ATOMICALLY_FRAME",
  [CATCH_RETRY_FRAME]     = "CATCH_RETRY_FRAME",
  [CATCH_STM_FRAME]       = "CATCH_STM_FRAME",
+ [TBOOST_STM_FRAME]      = "TBOOST_STM_FRAME",
  [WHITEHOLE]             = "WHITEHOLE"
 };
 
@@ -1033,4 +1034,3 @@ void
 info_hdr_type(StgClosure *closure, char *res){
   strcpy(res,closure_type_names[get_itbl(closure)->type]);
 }
-

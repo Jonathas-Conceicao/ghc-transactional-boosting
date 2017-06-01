@@ -197,6 +197,12 @@ stg_gc_prim_pp (P_ arg1, P_ arg2, W_ fun)
     jump fun(arg1,arg2);
 }
 
+stg_gc_prim_ppp (P_ arg1, P_ arg2, P_ arg3, W_ fun)
+{
+    call stg_gc_noregs ();
+    jump fun(arg1,arg2,arg3);
+}
+
 stg_gc_prim_n (W_ arg, W_ fun)
 {
     call stg_gc_noregs ();

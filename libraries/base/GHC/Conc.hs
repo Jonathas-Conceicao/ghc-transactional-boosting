@@ -68,6 +68,7 @@ module GHC.Conc
         -- * TVars
         , STM(..)
         , atomically
+        , newTBSTM
         , retry
         , orElse
         , throwSTM

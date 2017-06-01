@@ -396,6 +396,15 @@ typedef struct {
   StgClosure    *alt_code;
 } StgCatchRetryFrame;
 
+typedef struct {
+  StgHeader   header;
+  StgWord     undone;
+  StgClosure *tbCode;
+  StgClosure *tbAbort;
+  StgClosure *tbCommit;
+  StgClosure *result;
+} StgBoostSTMFrame;
+
 /* ----------------------------------------------------------------------------
    Messages
    ------------------------------------------------------------------------- */

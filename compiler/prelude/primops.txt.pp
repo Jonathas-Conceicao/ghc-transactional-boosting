@@ -2005,6 +2005,24 @@ primop  AtomicallyOp "atomically#" GenPrimOp
    out_of_line = True
    has_side_effects = True
 
+primop  NewTBSTMOp "newTBSTM#" GenPrimOp
+     (State# RealWorld -> (# State# RealWorld, a #))
+  -> (a -> (State# RealWorld -> (# State# RealWorld, b #)))
+  -> (State# RealWorld -> (# State# RealWorld, b #))
+  -> (State# RealWorld -> (# State# RealWorld, a #))
+  with
+  strictness  = { \ _arity -> mkClosedStrictSig [apply1Dmd, topDmd] topRes }
+                -- See Note [Strictness for mask/unmask/catch]
+  out_of_line = True
+  has_side_effects = True
+
+primop  AbortTBOp "abortTB#" GenPrimOp
+  (State# RealWorld -> (# State# RealWorld, a #))
+  with
+  strictness  = { \ _arity -> mkClosedStrictSig [topDmd] botRes }
+  out_of_line = True
+  has_side_effects = True
+
 -- NB: retry#'s strictness information specifies it to return bottom.
 -- This lets the compiler perform some extra simplifications, since retry#
 -- will technically never return.

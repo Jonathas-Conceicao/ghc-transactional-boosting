@@ -1856,6 +1856,7 @@ scavenge_stack(StgPtr p, StgPtr stack_end)
 
       // small bitmap (< 32 entries, or 64 on a 64-bit machine)
     case CATCH_STM_FRAME:
+    case TBOOST_STM_FRAME:
     case CATCH_RETRY_FRAME:
     case ATOMICALLY_FRAME:
     case UNDERFLOW_FRAME:

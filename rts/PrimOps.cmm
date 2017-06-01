@@ -1153,6 +1153,143 @@ INFO_TABLE_RET(stg_catch_stm_frame, CATCH_STM_FRAME,
     }
 }
 
+// Transactional Boost frame -------------------------------------------------------------
+
+/* Coment about the frame
+ */
+
+#define TBOOST_STM_FRAME_FIELDS(w_,p_,info_ptr,p1,p2,undone,tbCode,tbAbort,tbCommit,result) \
+    w_ info_ptr,                                                                            \
+    PROF_HDR_FIELDS(w_,p1,p2)                                                               \
+    w_ undone,                                                                              \
+    p_ tbCode,                                                                              \
+    p_ tbCommit,                                                                            \
+    p_ tbAbort,                                                                             \
+    p_ result
+
+INFO_TABLE_RET(stg_boost_stm_frame, TBOOST_STM_FRAME,
+               TBOOST_STM_FRAME_FIELDS(W_,P_,info_ptr,p1,p2,undone,tbCode,tbAbort,tbCommit,result))
+    return (P_ ret) //Value returned to the Stack Frame
+{
+    W_ r, trec, outer, outerOuter, new_trec;// ret2;
+
+    trec = StgTSO_trec(CurrentTSO);
+    outer  = StgTRecHeader_enclosing_trec(trec);
+
+    (r) = ccall stmCommitNestedTransaction(MyCapability() "ptr", trec "ptr");
+    if (r != 0) {
+        /* Commit succeeded, need to run the passed *commit action* now*/
+        ("ptr" new_trec) = ccall stmStartTransaction(MyCapability() "ptr", outer "ptr");
+        StgTSO_trec(CurrentTSO) = new_trec;
+
+        jump stg_ap_v_fast
+            (TBOOST_STM_FRAME_FIELDS(,,stg_commit_boosted_frame_info,p1,p2,undone,tbCode,tbAbort,tbCommit,ret))
+            (tbCommit);
+    } else {
+        /* Commit failed execute the undo action before retrying*/
+
+        // Start a new transaction
+        ("ptr" new_trec) = ccall stmStartTransaction(MyCapability() "ptr", outer "ptr");
+        StgTSO_trec(CurrentTSO) = new_trec;
+
+        // Set tail call for the a -> IO () function
+        jump stg_ap_pv_fast
+            (TBOOST_STM_FRAME_FIELDS(,,stg_retry_boosted_frame_info,p1,p2,1,tbCode,tbAbort,tbCommit,ret))
+            (tbAbort, ret);
+    }
+}
+
+INFO_TABLE_RET(stg_commit_boosted_frame, TBOOST_STM_FRAME,
+               TBOOST_STM_FRAME_FIELDS(W_,P_,info_ptr,p1,p2,undone,tbCode,tbAbort,tbCommit,result))
+    return (P_ ret) // Return value to be discharged
+{
+  W_ r, trec, outer;
+
+  trec = StgTSO_trec(CurrentTSO);
+  outer  = StgTRecHeader_enclosing_trec(trec);
+
+  // ccall stmDebugCommitAfter(trec "ptr");
+
+  (r) = ccall stmCommitNestedTransaction(MyCapability() "ptr", trec "ptr");
+  if (r != 0) {
+      /* Commit succeeded */
+      StgTSO_trec(CurrentTSO) = outer;
+      return (result);
+  } else {
+      /* Commiting the commit failed, retrying the commit action */
+      W_ new_trec;
+      ("ptr" new_trec) = ccall stmStartTransaction(MyCapability() "ptr", outer "ptr");
+      StgTSO_trec(CurrentTSO) = new_trec;
+
+      jump stg_ap_v_fast
+          (TBOOST_STM_FRAME_FIELDS(,,info_ptr,p1,p2,undone,tbCode,tbAbort,tbCommit,result))
+          (tbCommit);
+  }
+}
+
+INFO_TABLE_RET(stg_retry_boosted_frame, TBOOST_STM_FRAME,
+               TBOOST_STM_FRAME_FIELDS(W_,P_,info_ptr,p1,p2,undone,tbCode,tbAbort,tbCommit,result))
+    return (P_ ret) // Return value to be discharged
+{
+  W_ r, trec, outer, new_trec;
+
+  trec = StgTSO_trec(CurrentTSO);
+
+  // ccall stmDebugUndoAfter(trec "ptr");
+
+  outer  = StgTRecHeader_enclosing_trec(trec);
+  (r) = ccall stmCommitNestedTransaction(MyCapability() "ptr", trec "ptr");
+  if (r != 0) {
+      /* Commiting the undo succeeded retry the original action */
+
+      ("ptr" new_trec) = ccall stmStartTransaction(MyCapability() "ptr", outer "ptr");
+      StgTSO_trec(CurrentTSO) = new_trec;
+
+      jump stg_ap_v_fast
+          (TBOOST_STM_FRAME_FIELDS(,,stg_boost_stm_frame_info,p1,p2,0,tbCode,tbAbort,tbCommit,result))
+          (tbCode);
+  } else {
+      /* Commiting the undo failed, retrying the undo action */
+
+      ("ptr" new_trec) = ccall stmStartTransaction(MyCapability() "ptr", outer "ptr");
+      StgTSO_trec(CurrentTSO) = new_trec;
+
+      jump stg_ap_v_fast
+          (TBOOST_STM_FRAME_FIELDS(,,info_ptr,p1,p2,undone,tbCode,tbAbort,tbCommit,result))
+          (tbAbort, result);
+  }
+}
+
+INFO_TABLE_RET(stg_abort_boosted_frame, TBOOST_STM_FRAME,
+               TBOOST_STM_FRAME_FIELDS(W_,P_,info_ptr,p1,p2,undone,tbCode,tbAbort,tbCommit,result))
+    return (P_ ret) // Return value to be discharged
+{
+  W_ r, trec, outer, new_trec;
+
+  trec = StgTSO_trec(CurrentTSO);
+
+  // ccall stmDebugUndoAfter(trec "ptr");
+
+  outer  = StgTRecHeader_enclosing_trec(trec);
+  (r) = ccall stmCommitNestedTransaction(MyCapability() "ptr", trec "ptr");
+  if (r != 0) {
+      /* Commiting the undo succeeded exit */
+
+      StgTSO_trec(CurrentTSO) = outer;
+      ccall stmDebugMessage(outer, "Going back for the abort");
+      jump stg_abortTBzh();
+  } else {
+      /* Commiting the undo failed, retrying the undo action */
+      ccall stmDebugMessage(outer, "Retrying the undo action");
+      ("ptr" new_trec) = ccall stmStartTransaction(MyCapability() "ptr", outer "ptr");
+      StgTSO_trec(CurrentTSO) = new_trec;
+
+      jump stg_ap_v_fast
+          (TBOOST_STM_FRAME_FIELDS(,,info_ptr,p1,p2,undone,tbCode,tbAbort,tbCommit,result))
+          (tbAbort, result);
+  }
+}
+
 
 // Primop definition -----------------------------------------------------------
 
@@ -1198,6 +1335,116 @@ INFO_TABLE(stg_atomically,1,0,THUNK_1_0,"atomically","atomically")
     jump stg_atomicallyzh(StgThunk_payload(thunk,0));
 }
 
+stg_newTBSTMzh (P_ ac,      /* :: IO Maybe a */
+                P_ undo,    /* :: a -> IO () */
+                P_ commit   /* :: IO () */)
+{
+  // stmStartTransaction may allocate
+  MAYBE_GC_PPP(stg_newTBSTMzh, ac, undo, commit);
+
+  STK_CHK_GEN();
+
+  W_ cur_trec;
+  W_ new_trec;
+  P_ tbCode, tbCommit, tbAbort, result;
+
+  tbCode = ac;
+  tbAbort = undo;
+  tbCommit = commit;
+  result = NO_TREC;
+
+  /* Start a nested transaction to run the action(tbCode) passed */
+  cur_trec = StgTSO_trec(CurrentTSO);
+  ("ptr" new_trec) = ccall stmStartTransaction(MyCapability() "ptr", cur_trec "ptr");
+
+  StgTSO_trec(CurrentTSO) = new_trec;
+
+  // push the TBOOSTSTM_FRAME stack frame, and apply tbCode to realWorld#
+  jump stg_ap_v_fast
+      (TBOOST_STM_FRAME_FIELDS(,,stg_boost_stm_frame_info, CCCS, 0,
+                        0, tbCode,tbAbort,tbCommit,result))
+      (tbCode);
+}
+
+stg_abortTBzh
+{
+    W_ frame_type;
+    W_ frame;
+    W_ trec;
+    W_ outer;
+    W_ r;
+
+    // STM operations may allocate
+    MAYBE_GC_ (stg_abortTBzh); // NB. not MAYBE_GC(), we cannot make a
+                               // function call in an explicit-stack proc
+
+    // Find the enclosing ATOMICALLY_FRAME, CATCH_RETRY_FRAME or TBOOST_STM_FRAME
+abort_pop_stack:
+    SAVE_THREAD_STATE();
+    (frame_type) = ccall findRetryFrameHelper(MyCapability(), CurrentTSO "ptr");
+    LOAD_THREAD_STATE();
+    frame = Sp;
+    trec = StgTSO_trec(CurrentTSO);
+    outer  = StgTRecHeader_enclosing_trec(trec);
+
+    if (frame_type == CATCH_RETRY_FRAME) {
+        // The retry reaches a CATCH_RETRY_FRAME before the atomic frame
+        ASSERT(outer != NO_TREC);
+        // Abort the transaction
+        ccall stmAbortTransaction(MyCapability() "ptr", trec "ptr");
+        ccall stmFreeAbortedTRec(MyCapability() "ptr", trec "ptr");
+        StgTSO_trec(CurrentTSO) = outer;
+        Sp = Sp + SIZEOF_StgCatchRetryFrame;
+        goto abort_pop_stack;
+    }
+
+    if (frame_type == TBOOST_STM_FRAME) {
+        ASSERT(outer != NO_TREC);
+        // Tests if frame has already been undone
+        if (!StgBoostSTMFrame_undone(frame) != 0) {
+            // Execute undo action in the frame
+
+            ("ptr" trec) = ccall stmStartTransaction(MyCapability() "ptr", outer "ptr");
+            ccall stmDebugMessage(trec, "Starting undo action");
+            StgTSO_trec(CurrentTSO) = trec;
+            StgHeader_info(frame) = stg_abort_boosted_frame_info;
+            StgBoostSTMFrame_undone(frame) = 1 :: CInt; // true;
+            R1 = StgBoostSTMFrame_tbAbort(frame);
+            R2 = StgBoostSTMFrame_result(frame);
+
+            // Set tail call for the a -> IO () function
+            jump stg_ap_pv_fast[R1,R2];
+        } else {
+            // Frame has executed the undo: propagate the retry
+            ccall stmAbortTransaction(MyCapability() "ptr", trec "ptr");
+            ccall stmFreeAbortedTRec(MyCapability() "ptr", trec "ptr");
+            StgTSO_trec(CurrentTSO) = outer;
+            Sp = Sp + SIZEOF_StgBoostSTMFrame;
+            goto abort_pop_stack;
+        }
+    }
+
+    // We've reached the ATOMICALLY_FRAME: retry the block
+    ASSERT(frame_type == ATOMICALLY_FRAME);
+    if (outer != NO_TREC) {
+        // We called retry while checking invariants, so abort the current
+        // invariant check (merging its TVar accesses into the parents read
+        // set so we'll wait on them)
+        ccall stmAbortTransaction(MyCapability() "ptr", trec "ptr");
+        ccall stmFreeAbortedTRec(MyCapability() "ptr", trec "ptr");
+        trec = outer;
+        StgTSO_trec(CurrentTSO) = trec;
+        outer  = StgTRecHeader_enclosing_trec(trec);
+    }
+    ASSERT(outer == NO_TREC);
+
+    // Transaction was not valid: retry immediately
+    ("ptr" trec) = ccall stmStartTransaction(MyCapability() "ptr", outer "ptr");
+    StgTSO_trec(CurrentTSO) = trec;
+    Sp = frame;
+    R1 = StgAtomicallyFrame_code(frame);
+    jump stg_ap_v_fast [R1];
+}
 
 stg_catchSTMzh (P_ code    /* :: STM a */,
                 P_ handler /* :: Exception -> STM a */)
@@ -1285,6 +1532,32 @@ retry_pop_stack:
             goto retry_pop_stack;
         }
     }
+
+    if (frame_type == TBOOST_STM_FRAME) {
+    ASSERT(outer != NO_TREC);
+    // Tests if frame has already been undone
+    if (!StgBoostSTMFrame_undone(frame) != 0) {
+        // Execute undo action in the frame
+
+        ("ptr" trec) = ccall stmStartTransaction(MyCapability() "ptr", outer "ptr");
+        ccall stmDebugMessage(trec, "Starting undo action");
+        StgTSO_trec(CurrentTSO) = trec;
+        StgHeader_info(frame) = stg_abort_boosted_frame_info;
+        StgBoostSTMFrame_undone(frame) = 1 :: CInt; // true;
+        R1 = StgBoostSTMFrame_tbAbort(frame);
+        R2 = StgBoostSTMFrame_result(frame);
+
+        // Set tail call for the a -> IO () function
+        jump stg_ap_pv_fast[R1,R2];
+    } else {
+        // Frame has executed the undo: propagate the retry
+        ccall stmAbortTransaction(MyCapability() "ptr", trec "ptr");
+        ccall stmFreeAbortedTRec(MyCapability() "ptr", trec "ptr");
+        StgTSO_trec(CurrentTSO) = outer;
+        Sp = Sp + SIZEOF_StgBoostSTMFrame;
+        goto retry_pop_stack;
+    }
+}
 
     // We've reached the ATOMICALLY_FRAME: attempt to wait
     ASSERT(frame_type == ATOMICALLY_FRAME);
@@ -2423,4 +2696,3 @@ stg_traceMarkerzh ( W_ msg )
 #endif
     return ();
 }
-

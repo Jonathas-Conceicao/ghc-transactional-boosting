@@ -1,5 +1,5 @@
 /* ----------------------------------------------------------------------------
- * 
+ *
  * (c) The GHC Team, 1998-2005
  *
  * Closure Type Constants: out here because the native code generator
@@ -10,7 +10,7 @@
 #ifndef RTS_STORAGE_CLOSURETYPES_H
 #define RTS_STORAGE_CLOSURETYPES_H
 
-/* 
+/*
  * WARNING WARNING WARNING
  *
  * If you add or delete any closure types, don't forget to update
@@ -78,11 +78,12 @@
 #define ATOMICALLY_FRAME        57
 #define CATCH_RETRY_FRAME       58
 #define CATCH_STM_FRAME         59
-#define WHITEHOLE               60
-#define SMALL_MUT_ARR_PTRS_CLEAN      61
-#define SMALL_MUT_ARR_PTRS_DIRTY      62
-#define SMALL_MUT_ARR_PTRS_FROZEN0    63
-#define SMALL_MUT_ARR_PTRS_FROZEN     64
-#define N_CLOSURE_TYPES         65
+#define TBOOST_STM_FRAME        60
+#define WHITEHOLE               61
+#define SMALL_MUT_ARR_PTRS_CLEAN      62
+#define SMALL_MUT_ARR_PTRS_DIRTY      63
+#define SMALL_MUT_ARR_PTRS_FROZEN0    64
+#define SMALL_MUT_ARR_PTRS_FROZEN     65
+#define N_CLOSURE_TYPES         66
 
 #endif /* RTS_STORAGE_CLOSURETYPES_H */

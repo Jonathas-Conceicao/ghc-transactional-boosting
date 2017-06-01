@@ -69,6 +69,7 @@ module GHC.Conc.Sync
         -- * TVars
         , STM(..)
         , atomically
+        , newTBSTM
         , retry
         , orElse
         , throwSTM
@@ -698,6 +699,79 @@ unsafeIOToSTM (IO m) = STM m
 
 atomically :: STM a -> IO a
 atomically (STM m) = IO (\s -> (atomically# m) s )
+--Coments about the Boost primitive
+
+data BoostException = BoostingNothing
+   deriving (Show, Typeable)
+
+instance Exception BoostException
+
+-- {-Execução dobrada, Isso não funciona-}
+-- newTBSTM :: IO(Maybe a) -> (a -> IO ()) -> IO () -> STM a
+-- newTBSTM mac undo commit = case test of
+--   True -> STM (\s -> (newTBSTM# (unIO val) (unIO.undo) (unIO commit)) s)
+--   False -> throw BoostingNothing -- STM (\s -> abortTB# s)
+--   where
+--     val = mac >>= \ac -> case ac of
+--       Just a  -> return a
+--       Nothing -> throw BoostingNothing
+--     test = unsafePerformIO $ mac >>= \ms -> case ms of
+--       Just _ -> return True
+--       Nothing -> return False
+
+-- newTBSTM :: IO(Maybe a) -> (a -> IO ()) -> IO () -> STM a
+-- newTBSTM iomac undo commit = case test of
+--   (True , Just ac) -> STM (\s -> (newTBSTM# (unIO $ return ac) (unIO.undo) (unIO commit)) s)
+--   (True , Nothing) -> throw BoostingNothing -- Shouldn't happen
+--   (False, _)       -> throw BoostingNothing -- STM (\s -> abortTB# s)
+--   where
+--     test = unsafePerformIO $ iomac >>= \mac -> case mac of
+--       Just _  -> return (True,  mac)
+--       Nothing -> return (False, mac)
+--
+-- newTBSTM :: IO(Maybe a) -> (a -> IO ()) -> IO () -> STM a
+-- newTBSTM iomac undo commit = unsafeIOToSTM $ iomac >>= \mac -> case mac of
+--       Just ac -> IO (\s -> (newTBSTM# (unIO $ return ac) (unIO.undo) (unIO commit)) s)
+--       Nothing -> throw BoostingNothing -- STM (\s -> abortTB# s)
+
+newTBSTM :: IO(Maybe a) -> (a -> IO ()) -> IO () -> STM a
+newTBSTM iomac undo commit = STM (\s -> expression s)
+  where
+    expression = unIO $ iomac >>= \mac -> case mac of
+      Just ac -> IO (\s -> (newTBSTM# (unIO $ return ac) (unIO.undo) (unIO commit)) s)
+      Nothing -> IO (\s -> (abortTB# s)) -- abortTB -- throw BoostingNothing -- STM (\s -> abortTB# s)
+--
+-- newTBSTM :: IO(Maybe a) -> (a -> IO ()) -> IO () -> STM a
+-- newTBSTM iomac undo commit = STM (\s -> (newTBSTM# (unIO ioac) (unIO.undo) (unIO commit)) s)
+--   where
+--    ioac = iomac >>= \mac -> case mac of
+--      Just ac -> return ac
+--      Nothing -> throw BoostingNothing
+
+-- newTBSTM :: IO(Maybe a) -> (a -> IO ()) -> IO () -> STM a
+-- newTBSTM iomac undo commit = catchSTM (STM (\s -> (newTBSTM# (unIO ac) (unIO.undo) (unIO commit)) s)) (handler iomac)
+--   where
+--    ac = iomac >>= \mac -> case mac of
+--      Just ac -> return ac
+--      Nothing -> throw BoostingNothing
+--    handler :: IO(Maybe a) -> BoostException -> STM a
+--    handler iomac e = retry
+
+-- newTBSTM :: IO(Maybe a) -> (a -> IO ()) -> IO () -> STM a
+-- newTBSTM iomac undo commit = STM $ \s ->
+--   case (newTBSTM# (unIO iomac) (unIO.undo) (unIO commit)) of
+--     (# s1, 0#, _ #) -> (# s, throw BoostingNothing #)
+--     (# s1, _, ac #) -> (# s, ac #)
+
+-- |abortTB
+-- abortTB :: IO a
+-- abortTB = IO $ \s# -> abortTB# s#
+
+-- unMonad :: m a -> (State# RealWorld -> (# State# RealWorld, a #))
+-- unMonad (STM a) = a
+-- unMonad (IO  a) = a
+
+
 
 -- |Retry execution of the current memory transaction because it has seen
 -- values in TVars which mean that it should not continue (e.g. the TVars

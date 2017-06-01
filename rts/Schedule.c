@@ -2725,6 +2725,11 @@ raiseExceptionHelper (StgRegTable *reg, StgTSO *tso, StgClosure *exception)
             tso->stackobj->sp = p;
             return CATCH_FRAME;
 
+        case TBOOST_STM_FRAME:
+            debugTrace(DEBUG_stm, "found TBOOST_STM_FRAME at %p", p);
+            tso->stackobj->sp = p;
+            return TBOOST_STM_FRAME;
+
         case CATCH_STM_FRAME:
             debugTrace(DEBUG_stm, "found CATCH_STM_FRAME at %p", p);
             tso->stackobj->sp = p;
@@ -2801,6 +2806,12 @@ findRetryFrameHelper (Capability *cap, StgTSO *tso)
                    "found CATCH_RETRY_FRAME at %p during retry", p);
         tso->stackobj->sp = p;
         return CATCH_RETRY_FRAME;
+
+    case TBOOST_STM_FRAME:
+        debugTrace(DEBUG_stm,
+                   "found TBOOST_STM_FRAME at %p during retry", p);
+        tso->stackobj->sp = p;
+        return TBOOST_STM_FRAME;
 
     case CATCH_STM_FRAME: {
         StgTRecHeader *trec = tso -> trec;

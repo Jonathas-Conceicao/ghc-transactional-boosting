@@ -1112,6 +1112,8 @@ typedef struct _RtsSymbolVal {
       SymI_HasProto(stg_catchzh)                                        \
       SymI_HasProto(stg_catchRetryzh)                                   \
       SymI_HasProto(stg_catchSTMzh)                                     \
+      SymI_HasProto(stg_newTBSTMzh)                                     \
+      SymI_HasProto(stg_abortTBzh)                                      \
       SymI_HasProto(stg_checkzh)                                        \
       SymI_HasProto(closure_flags)                                      \
       SymI_HasProto(cmp_thread)                                         \

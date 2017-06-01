@@ -111,6 +111,7 @@ checkStackFrame( StgPtr c )
     case ATOMICALLY_FRAME:
     case CATCH_RETRY_FRAME:
     case CATCH_STM_FRAME:
+    case TBOOST_STM_FRAME:
     case CATCH_FRAME:
       // small bitmap cases (<= 32 entries)
     case UNDERFLOW_FRAME:
@@ -363,6 +364,7 @@ checkClosure( StgClosure* p )
     case ATOMICALLY_FRAME:
     case CATCH_RETRY_FRAME:
     case CATCH_STM_FRAME:
+    case TBOOST_STM_FRAME:
             barf("checkClosure: stack frame");
 
     case AP:

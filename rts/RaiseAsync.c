@@ -90,7 +90,7 @@ suspendComputation (Capability *cap, StgTSO *tso, StgUpdateFrame *stop_here)
    throwTo().
 
    Note [Throw to self when masked]
-   
+
    When a StackOverflow occurs when the thread is masked, we want to
    defer the exception to when the thread becomes unmasked/hits an
    interruptible point.  We already have a mechanism for doing this,
@@ -100,26 +100,26 @@ suspendComputation (Capability *cap, StgTSO *tso, StgUpdateFrame *stop_here)
    multithreaded nonsense). Morally, a stack overflow should be an
    asynchronous exception sent by a thread to itself, and it should
    have the same semantics.  But there are a few key differences:
-   
+
    - If you actually tried to send an asynchronous exception to
      yourself using throwTo, the exception would actually immediately
      be delivered.  This is because throwTo itself is considered an
      interruptible point, so the exception is always deliverable. Thus,
      ordinarily, we never end up with a message to onesself in the
      blocked_exceptions queue.
-   
+
    - In the case of a StackOverflow, we don't actually care about the
      wakeup semantics; when an exception is delivered, the thread that
      originally threw the exception should be woken up, since throwTo
      blocks until the exception is successfully thrown.  Fortunately,
      it is harmless to wakeup a thread that doesn't actually need waking
      up, e.g. ourselves.
-   
+
    - No synchronization is necessary, because we own the TSO and the
      capability.  You can observe this by tracing through the execution
      of throwTo.  We skip synchronizing the message and inter-capability
      communication.
-   
+
    We think this doesn't break any invariants, but do be careful!
    -------------------------------------------------------------------------- */
 
@@ -1057,6 +1057,7 @@ raiseAsync(Capability *cap, StgTSO *tso, StgClosure *exception,
             }
 
         case CATCH_STM_FRAME:
+        case TBOOST_STM_FRAME:
         case CATCH_RETRY_FRAME:
             // CATCH frames within an atomically block: abort the
             // inner transaction and continue.  Eventually we will

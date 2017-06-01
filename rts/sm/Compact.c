@@ -309,6 +309,7 @@ thread_stack(StgPtr p, StgPtr stack_end)
         switch (info->i.type) {
 
             // small bitmap (<= 32 entries, or 64 on a 64-bit machine)
+        case TBOOST_STM_FRAME:
         case CATCH_RETRY_FRAME:
         case CATCH_STM_FRAME:
         case ATOMICALLY_FRAME:

@@ -485,6 +485,13 @@ wanteds = concat
           ,closureField C "StgCatchSTMFrame" "handler"
           ,closureField C "StgCatchSTMFrame" "code"
 
+          ,closureSize  C "StgBoostSTMFrame"
+          ,closureField C "StgBoostSTMFrame" "undone"
+          ,closureField C "StgBoostSTMFrame" "tbCode"
+          ,closureField C "StgBoostSTMFrame" "tbAbort"
+          ,closureField C "StgBoostSTMFrame" "tbCommit"
+          ,closureField C "StgBoostSTMFrame" "result"
+
           ,closureSize  C "StgCatchRetryFrame"
           ,closureField C "StgCatchRetryFrame" "running_alt_code"
           ,closureField C "StgCatchRetryFrame" "first_code"
@@ -909,4 +916,3 @@ execute verbose prog args
       ec <- rawSystem prog args
       unless (ec == ExitSuccess) $
           die ("Executing " ++ show prog ++ " failed")
-

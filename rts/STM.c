@@ -1312,6 +1312,13 @@ StgInvariantCheckQueue *stmGetInvariantsToCheck(Capability *cap, StgTRecHeader *
 }
 
 /*......................................................................*/
+// Debug function
+void stmDebugMessage(StgTRecHeader *trec, const char *string){
+  TRACE("%p : TBDebug:%s. Into %p", trec, string, trec -> enclosing_trec);
+}
+/*......................................................................*/
+
+/*......................................................................*/
 
 StgBool stmCommitTransaction(Capability *cap, StgTRecHeader *trec) {
   int result;
