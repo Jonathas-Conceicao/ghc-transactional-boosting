@@ -1,0 +1,18 @@
+Changes in version 0.11.0.0
+
+ * Define `Applicative` instances for `Data.Vector.Fusion.Util.{Box,Id}`
+ * Define non-bottom `fail` for `instance Monad Vector`
+
+Changes in version 0.10.9.1
+
+ * Implement poly-kinded Typeable
+
+Changes in version 0.10.0.1
+
+ * Require `primitive` to include workaround for a GHC array copying bug
+
+Changes in version 0.10
+
+ * `NFData` instances
+ * More efficient block fills
+ * Safe Haskell support removed
