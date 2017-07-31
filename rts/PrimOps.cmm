@@ -1171,32 +1171,9 @@ INFO_TABLE_RET(stg_boost_stm_frame, TBOOST_STM_FRAME,
                TBOOST_STM_FRAME_FIELDS(W_,P_,info_ptr,p1,p2,undone,tbCode,tbAbort,tbCommit,result))
     return (P_ ret) //Value returned to the Stack Frame
 {
-    W_ r, trec, outer, outerOuter, new_trec;// ret2;
-
-    trec = StgTSO_trec(CurrentTSO);
-    outer  = StgTRecHeader_enclosing_trec(trec);
-
-    (r) = ccall stmCommitNestedTransaction(MyCapability() "ptr", trec "ptr");
-    if (r != 0) {
-        /* Commit succeeded, need to run the passed *commit action* now*/
-        ("ptr" new_trec) = ccall stmStartTransaction(MyCapability() "ptr", outer "ptr");
-        StgTSO_trec(CurrentTSO) = new_trec;
-
-        jump stg_ap_v_fast
-            (TBOOST_STM_FRAME_FIELDS(,,stg_commit_boosted_frame_info,p1,p2,undone,tbCode,tbAbort,tbCommit,ret))
-            (tbCommit);
-    } else {
-        /* Commit failed execute the undo action before retrying*/
-
-        // Start a new transaction
-        ("ptr" new_trec) = ccall stmStartTransaction(MyCapability() "ptr", outer "ptr");
-        StgTSO_trec(CurrentTSO) = new_trec;
-
-        // Set tail call for the a -> IO () function
-        jump stg_ap_pv_fast
-            (TBOOST_STM_FRAME_FIELDS(,,stg_retry_boosted_frame_info,p1,p2,1,tbCode,tbAbort,tbCommit,ret))
-            (tbAbort, ret);
-    }
+    result = ret;
+    (P_ commitReturn) = call stg_ap_v_fast (tbCommit);
+    return (result);
 }
 
 INFO_TABLE_RET(stg_commit_boosted_frame, TBOOST_STM_FRAME,
@@ -1335,29 +1312,15 @@ INFO_TABLE(stg_atomically,1,0,THUNK_1_0,"atomically","atomically")
     jump stg_atomicallyzh(StgThunk_payload(thunk,0));
 }
 
-stg_newTBSTMzh (P_ ac,      /* :: IO Maybe a */
-                P_ undo,    /* :: a -> IO () */
-                P_ commit   /* :: IO () */)
+stg_newTBSTMzh (P_ tbCode,      /* :: IO Maybe a */
+                P_ tbAbort,    /* :: a -> IO () */
+                P_ tbCommit   /* :: IO () */)
 {
-  // stmStartTransaction may allocate
-  MAYBE_GC_PPP(stg_newTBSTMzh, ac, undo, commit);
 
   STK_CHK_GEN();
-
-  W_ cur_trec;
-  W_ new_trec;
-  P_ tbCode, tbCommit, tbAbort, result;
-
-  tbCode = ac;
-  tbAbort = undo;
-  tbCommit = commit;
+  P_ result;
+  
   result = NO_TREC;
-
-  /* Start a nested transaction to run the action(tbCode) passed */
-  cur_trec = StgTSO_trec(CurrentTSO);
-  ("ptr" new_trec) = ccall stmStartTransaction(MyCapability() "ptr", cur_trec "ptr");
-
-  StgTSO_trec(CurrentTSO) = new_trec;
 
   // push the TBOOSTSTM_FRAME stack frame, and apply tbCode to realWorld#
   jump stg_ap_v_fast
