@@ -466,9 +466,6 @@
 #define GC_PRIM_PP(fun,arg1,arg2)               \
         jump stg_gc_prim_pp(arg1,arg2,fun);
 
-#define GC_PRIM_PPP(fun,arg1,arg2,arg3)           \
-        jump stg_gc_prim_ppp(arg1,arg2,arg3,fun); \
-
 #define MAYBE_GC_(fun)                          \
     if (CHECK_GC()) {                           \
         HpAlloc = 0;                            \
@@ -492,12 +489,6 @@
         HpAlloc = 0;                            \
         GC_PRIM_PP(fun,arg1,arg2)               \
    }
-
-#define MAYBE_GC_PPP(fun,arg1,arg2,arg3)        \
-    if (CHECK_GC()) {                           \
-      HpAlloc = 0;                              \
-      GC_PRIM_PPP(fun,arg1,arg2,arg3)           \
-    }
 
 #define STK_CHK_LL(n, fun)                      \
     TICK_BUMP(STK_CHK_ctr);                     \

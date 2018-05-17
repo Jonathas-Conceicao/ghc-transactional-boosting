@@ -1251,9 +1251,9 @@ INFO_TABLE(stg_atomically,1,0,THUNK_1_0,"atomically","atomically")
     jump stg_atomicallyzh(StgThunk_payload(thunk,0));
 }
 
-stg_newTBSTMzh (P_ tbCode,      /* :: IO Maybe a */
-                P_ tbAbort,    /* :: a -> IO () */
-                P_ tbCommit   /* :: IO () */)
+stg_newTBSTMzh (P_ tbCode,      /* :: IO a       */
+                P_ tbAbort,     /* :: a -> IO () */
+                P_ tbCommit     /* :: IO ()      */)
 {
 
   STK_CHK_GEN();
