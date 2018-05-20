@@ -1171,9 +1171,13 @@ INFO_TABLE_RET(stg_boost_stm_frame, TBOOST_STM_FRAME,
                TBOOST_STM_FRAME_FIELDS(W_,P_,info_ptr,p1,p2,undone,tbCode,tbAbort,tbCommit,result))
     return (P_ ret) //Value returned to the Stack Frame
 {
+    W_ trec;
     result = ret;
-    (P_ commitReturn) = call stg_ap_v_fast (tbCommit);
-    return (result);
+    trec = StgTSO_trec(CurrentTSO);
+    ccall stmAddInvariantToCheck(MyCapability() "ptr",
+                                 trec "ptr",
+                                 tbCommit "ptr");
+    return ();
 }
 
 INFO_TABLE_RET(stg_abort_boosted_frame, TBOOST_STM_FRAME,
