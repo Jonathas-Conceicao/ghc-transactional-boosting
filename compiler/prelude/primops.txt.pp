@@ -2006,7 +2006,7 @@ primop  AtomicallyOp "atomically#" GenPrimOp
    has_side_effects = True
 
 primop  NewTBSTMOp "newTBSTM#" GenPrimOp
-     (State# RealWorld -> (# State# RealWorld, a #))
+     (a)
   -> (a -> (State# RealWorld -> (# State# RealWorld, b #)))
   -> (State# RealWorld -> (# State# RealWorld, b #))
   -> (State# RealWorld -> (# State# RealWorld, a #))

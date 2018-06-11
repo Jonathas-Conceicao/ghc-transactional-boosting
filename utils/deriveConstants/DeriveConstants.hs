@@ -487,10 +487,8 @@ wanteds = concat
 
           ,closureSize  C "StgBoostSTMFrame"
           ,closureField C "StgBoostSTMFrame" "undone"
-          ,closureField C "StgBoostSTMFrame" "tbCode"
+          ,closureField C "StgBoostSTMFrame" "tbResult"
           ,closureField C "StgBoostSTMFrame" "tbAbort"
-          ,closureField C "StgBoostSTMFrame" "tbCommit"
-          ,closureField C "StgBoostSTMFrame" "result"
 
           ,closureSize  C "StgCatchRetryFrame"
           ,closureField C "StgCatchRetryFrame" "running_alt_code"

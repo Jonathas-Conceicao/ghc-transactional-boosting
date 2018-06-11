@@ -399,10 +399,8 @@ typedef struct {
 typedef struct {
   StgHeader   header;
   StgWord     undone;
-  StgClosure *tbCode;
+  StgClosure *tbResult;
   StgClosure *tbAbort;
-  StgClosure *tbCommit;
-  StgClosure *result;
 } StgBoostSTMFrame;
 
 /* ----------------------------------------------------------------------------

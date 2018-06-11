@@ -1158,26 +1158,22 @@ INFO_TABLE_RET(stg_catch_stm_frame, CATCH_STM_FRAME,
 /* Coment about the frame
  */
 
-#define TBOOST_STM_FRAME_FIELDS(w_,p_,info_ptr,p1,p2,undone,tbCode,tbAbort,tbCommit,result) \
-    w_ info_ptr,                                                                            \
-    PROF_HDR_FIELDS(w_,p1,p2)                                                               \
-    w_ undone,                                                                              \
-    p_ tbCode,                                                                              \
-    p_ tbCommit,                                                                            \
-    p_ tbAbort,                                                                             \
-    p_ result
+#define TBOOST_STM_FRAME_FIELDS(w_,p_,info_ptr,p1,p2,undone,tbResult,tbAbort) \
+    w_ info_ptr,                                                              \
+    PROF_HDR_FIELDS(w_,p1,p2)                                                 \
+    w_ undone,                                                                \
+    p_ tbResult,                                                              \
+    p_ tbAbort
 
 INFO_TABLE_RET(stg_boost_stm_frame, TBOOST_STM_FRAME,
-               TBOOST_STM_FRAME_FIELDS(W_,P_,info_ptr,p1,p2,undone,tbCode,tbAbort,tbCommit,result))
+               TBOOST_STM_FRAME_FIELDS(W_,P_,info_ptr,p1,p2,undone,tbResult,tbAbort))
     return (P_ ret) //Value returned to the Stack Frame
 {
-    result = ret;
-    (P_ commitReturn) = call stg_ap_v_fast (tbCommit);
-    return (result);
+    return (tbResult);
 }
 
 INFO_TABLE_RET(stg_abort_boosted_frame, TBOOST_STM_FRAME,
-               TBOOST_STM_FRAME_FIELDS(W_,P_,info_ptr,p1,p2,undone,tbCode,tbAbort,tbCommit,result))
+               TBOOST_STM_FRAME_FIELDS(W_,P_,info_ptr,p1,p2,undone,tbResult,tbAbort))
     return (P_ ret) // Return value to be discharged
 {
   W_ r, trec, outer, new_trec;
@@ -1192,7 +1188,7 @@ INFO_TABLE_RET(stg_abort_boosted_frame, TBOOST_STM_FRAME,
 }
 
 INFO_TABLE_RET(stg_retry_boosted_frame, TBOOST_STM_FRAME,
-               TBOOST_STM_FRAME_FIELDS(W_,P_,info_ptr,p1,p2,undone,tbCode,tbAbort,tbCommit,result))
+               TBOOST_STM_FRAME_FIELDS(W_,P_,info_ptr,p1,p2,undone,tbResult,tbAbort))
     return (P_ ret) // Return value to be discharged
 {
   W_ r, trec, outer, new_trec;
@@ -1251,21 +1247,19 @@ INFO_TABLE(stg_atomically,1,0,THUNK_1_0,"atomically","atomically")
     jump stg_atomicallyzh(StgThunk_payload(thunk,0));
 }
 
-stg_newTBSTMzh (P_ tbCode,      /* :: IO Maybe a */
+stg_newTBSTMzh (P_ tbResult,   /* :: a          */
                 P_ tbAbort,    /* :: a -> IO () */
-                P_ tbCommit   /* :: IO () */)
+                P_ tbCommit    /* :: IO ()      */)
 {
 
   STK_CHK_GEN();
-  P_ result;
-  
-  result = NO_TREC;
+
+  (P_ commitReturn) = call stg_ap_v_fast (tbCommit);
 
   // push the TBOOSTSTM_FRAME stack frame, and apply tbCode to realWorld#
-  jump stg_ap_v_fast
-      (TBOOST_STM_FRAME_FIELDS(,,stg_boost_stm_frame_info, CCCS, 0,
-                        0, tbCode,tbAbort,tbCommit,result))
-      (tbCode);
+  push (TBOOST_STM_FRAME_FIELDS(,,stg_boost_stm_frame_info, CCCS, 0,
+                                0, tbResult,tbAbort));
+  return (tbResult);
 }
 
 stg_abortTBzh
@@ -1312,7 +1306,7 @@ abort_pop_stack:
             StgHeader_info(frame) = stg_abort_boosted_frame_info;
             StgBoostSTMFrame_undone(frame) = 1 :: CInt; // true;
             R1 = StgBoostSTMFrame_tbAbort(frame);
-            R2 = StgBoostSTMFrame_result(frame);
+            R2 = StgBoostSTMFrame_tbResult(frame);
 
             // Set tail call for the a -> IO () function
             jump stg_ap_pv_fast[R1,R2];
@@ -1447,7 +1441,7 @@ retry_pop_stack:
             StgHeader_info(frame) = stg_retry_boosted_frame_info;
             StgBoostSTMFrame_undone(frame) = 1 :: CInt; // true;
             R1 = StgBoostSTMFrame_tbAbort(frame);
-            R2 = StgBoostSTMFrame_result(frame);
+            R2 = StgBoostSTMFrame_tbResult(frame);
 
             // Set tail call for the a -> IO () function
             jump stg_ap_pv_fast[R1,R2];
